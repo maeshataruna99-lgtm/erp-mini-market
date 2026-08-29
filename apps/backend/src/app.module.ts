@@ -15,6 +15,7 @@ import { PoModule } from './modules/transaction/po/po.module';
 import { ReceivingModule } from './modules/transaction/receiving/receiving.module';
 import { OpnameModule } from './modules/transaction/opname/opname.module';
 import { MutationModule } from './modules/transaction/mutation/mutation.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { MutationModule } from './modules/transaction/mutation/mutation.module';
     ReceivingModule,
     OpnameModule,
     MutationModule,
+    DashboardModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
