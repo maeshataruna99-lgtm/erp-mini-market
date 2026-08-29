@@ -14,5 +14,13 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
-  }
+  },
+  "trustedDependencies": [
+    "@prisma/client",
+    "prisma",
+    "@prisma/engines",
+    "esbuild",
+    "vue-demi",
+    "@scarf/scarf"
+  ]
 }
