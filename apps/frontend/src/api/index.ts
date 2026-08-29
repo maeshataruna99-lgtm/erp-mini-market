@@ -80,7 +80,7 @@ export const poApi = {
 
 // ===== Receiving =====
 export const receivingApi = {
-  list: (params?: { page?: number; limit?: number }) =>
+  list: (params?: { page?: number; limit?: number; search?: string }) =>
     paginated<GoodsReceiving>('/receiving', { params }),
   detail: (id: string) => get<GoodsReceiving>(`/receiving/${id}`),
   create: (body: { poId: string; unitId: string }) => post<GoodsReceiving>('/receiving', body),
@@ -90,7 +90,7 @@ export const receivingApi = {
 
 // ===== Opname =====
 export const opnameApi = {
-  list: (params?: { page?: number; limit?: number; status?: OpnameStatus }) =>
+  list: (params?: { page?: number; limit?: number; status?: OpnameStatus; search?: string }) =>
     paginated<OpnameSession>('/opname/sessions', { params }),
   detail: (id: string) => get<OpnameSession>(`/opname/sessions/${id}`),
   create: (body: { unitId: string; scope?: string; scheduledAt?: string }) =>
@@ -104,7 +104,7 @@ export const opnameApi = {
 
 // ===== Mutation =====
 export const mutationApi = {
-  list: (params?: { page?: number; limit?: number; status?: MutationStatus }) =>
+  list: (params?: { page?: number; limit?: number; status?: MutationStatus; search?: string }) =>
     paginated<StockMutation>('/mutations', { params }),
   detail: (id: string) => get<StockMutation>(`/mutations/${id}`),
   create: (body: { fromUnitId: string; toUnitId: string; items: { productId: string; qty: number }[] }) =>

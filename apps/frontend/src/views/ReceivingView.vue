@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
+import Pagination from '@/components/ui/Pagination.vue';
 import { poApi, receivingApi, unitApi } from '@/api';
 import { formatDate } from '@/utils/format';
 import { useToast } from '@/composables/useToast';
+import { usePagedList } from '@/composables/usePagedList';
 import type { GoodsReceiving, PurchaseOrder, ReceivingItem, Unit } from '@/types';
 
 const toast = useToast();
-const list = ref<GoodsReceiving[]>([]);
 const units = ref<Unit[]>([]);
 const sentPos = ref<PurchaseOrder[]>([]);
-const loading = ref(false);
 const showCreate = ref(false);
 const showConfirm = ref(false);
 
@@ -20,15 +20,21 @@ const currentReceiving = ref<GoodsReceiving | null>(null);
 const qtyMap = reactive<Record<string, number>>({});
 const confirmingItems = ref<ReceivingItem[]>([]);
 
-async function load() {
-  loading.value = true;
-  try {
-    const res = await receivingApi.list({ limit: 50 });
-    list.value = res.data;
-  } finally {
-    loading.value = false;
-  }
-}
+const {
+  items: list,
+  loading,
+  page,
+  total,
+  totalPages,
+  limit,
+  search,
+  load,
+  next,
+  prev,
+  changeLimit,
+} = usePagedList<GoodsReceiving>({
+  fetcher: (p) => receivingApi.list(p),
+});
 
 async function openCreate() {
   showCreate.value = !showCreate.value;
@@ -83,13 +89,22 @@ onMounted(load);
 
 <template>
   <div class="space-y-4">
-    <button
-      class="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
-      @click="openCreate"
-    >
-      <i class="ph ph-plus"></i>
-      {{ showCreate ? 'Tutup' : 'Buat Penerimaan' }}
-    </button>
+    <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+      <button
+        class="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shrink-0"
+        @click="openCreate"
+      >
+        <i class="ph ph-plus"></i>
+        {{ showCreate ? 'Tutup' : 'Buat Penerimaan' }}
+      </button>
+      <input
+        v-model="search"
+        type="text"
+        placeholder="Cari nomor PO atau supplier..."
+        class="flex-1 min-w-[200px] px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all"
+        @keyup.enter="load"
+      />
+    </div>
 
     <div v-if="showCreate" class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -128,6 +143,7 @@ onMounted(load);
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-50">
+            <tr v-if="loading"><td colspan="5" class="px-6 py-8 text-center text-secondary">Memuat...</td></tr>
             <tr v-for="r in list" :key="r.id" class="hover:bg-slate-50/50 transition-colors">
               <td class="px-6 py-4 font-mono text-xs font-medium text-slate-900">{{ r.po?.poNumber }}</td>
               <td class="px-6 py-4 text-slate-900">{{ r.po?.supplier?.name }}</td>
@@ -146,10 +162,18 @@ onMounted(load);
                 </button>
               </td>
             </tr>
-            <tr v-if="list.length === 0"><td colspan="5" class="px-6 py-8 text-center text-secondary">Belum ada penerimaan.</td></tr>
+            <tr v-if="!loading && list.length === 0"><td colspan="5" class="px-6 py-8 text-center text-secondary">Belum ada penerimaan.</td></tr>
           </tbody>
         </table>
       </div>
+      <Pagination
+        :page="page"
+        :total-pages="totalPages"
+        :total="total"
+        :limit="limit"
+        @change-page="(p) => (p > page ? next() : prev())"
+        @change-limit="changeLimit"
+      />
     </div>
 
     <!-- Confirm Modal -->

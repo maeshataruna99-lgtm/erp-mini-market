@@ -1,28 +1,38 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive } from 'vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
+import Pagination from '@/components/ui/Pagination.vue';
 import { productApi } from '@/api';
 import { formatNumber } from '@/utils/format';
+import { usePagedList } from '@/composables/usePagedList';
 import type { Product } from '@/types';
 
-const products = ref<Product[]>([]);
-const loading = ref(false);
-const filters = reactive({ search: '', stockStatus: 'all', category: 'all' });
+const filters = reactive({
+  stockStatus: 'all' as 'all' | 'low' | 'ok' | 'out',
+  category: 'all',
+});
 
-async function load() {
-  loading.value = true;
-  try {
-    const res = await productApi.list({
-      search: filters.search || undefined,
-      stockStatus: (filters.stockStatus as 'all' | 'low' | 'ok' | 'out') || undefined,
+const {
+  items: products,
+  loading,
+  page,
+  total,
+  totalPages,
+  limit,
+  search,
+  load,
+  next,
+  prev,
+  changeLimit,
+  applyFilter,
+} = usePagedList<Product>({
+  fetcher: (p) =>
+    productApi.list({
+      ...p,
+      stockStatus: filters.stockStatus === 'all' ? undefined : filters.stockStatus,
       category: filters.category === 'all' ? undefined : filters.category,
-      limit: 50,
-    });
-    products.value = res.data;
-  } finally {
-    loading.value = false;
-  }
-}
+    }),
+});
 
 function totalQty(p: Product): number {
   return p.stockLevels?.reduce((a, s) => a + s.qty, 0) ?? 0;
@@ -45,7 +55,7 @@ onMounted(load);
       <div class="relative flex-1">
         <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-secondary"></i>
         <input
-          v-model="filters.search"
+          v-model="search"
           type="text"
           placeholder="Cari nama produk atau SKU..."
           class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
@@ -56,7 +66,7 @@ onMounted(load);
         <select
           v-model="filters.stockStatus"
           class="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-secondary focus:outline-none focus:border-primary cursor-pointer"
-          @change="load"
+          @change="applyFilter"
         >
           <option value="all">Semua Status</option>
           <option value="low">Stok Rendah</option>
@@ -107,6 +117,14 @@ onMounted(load);
           </tbody>
         </table>
       </div>
+      <Pagination
+        :page="page"
+        :total-pages="totalPages"
+        :total="total"
+        :limit="limit"
+        @change-page="(p) => (p > page ? next() : prev())"
+        @change-limit="changeLimit"
+      />
     </div>
   </div>
 </template>

@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
+import Pagination from '@/components/ui/Pagination.vue';
 import { poApi, productApi, supplierApi } from '@/api';
 import { formatRupiah } from '@/utils/format';
 import { useToast } from '@/composables/useToast';
+import { usePagedList } from '@/composables/usePagedList';
 import type { Product, PurchaseOrder, Supplier } from '@/types';
 
 const toast = useToast();
-const list = ref<PurchaseOrder[]>([]);
-const loading = ref(false);
 const statusFilter = ref('all');
 const showCreate = ref(false);
 
@@ -27,18 +27,26 @@ const itemTotal = computed(() =>
   form.items.reduce((a, it) => a + (it.price || 0) * (it.qtyOrder || 0), 0),
 );
 
-async function load() {
-  loading.value = true;
-  try {
-    const res = await poApi.list({
+const {
+  items: list,
+  loading,
+  page,
+  total,
+  totalPages,
+  limit,
+  search,
+  load,
+  next,
+  prev,
+  changeLimit,
+  applyFilter,
+} = usePagedList<PurchaseOrder>({
+  fetcher: (p) =>
+    poApi.list({
+      ...p,
       status: statusFilter.value === 'all' ? undefined : (statusFilter.value as never),
-      limit: 50,
-    });
-    list.value = res.data;
-  } finally {
-    loading.value = false;
-  }
-}
+    }),
+});
 
 async function openCreate() {
   showCreate.value = !showCreate.value;
@@ -114,10 +122,17 @@ onMounted(load);
         <i class="ph ph-plus"></i>
         {{ showCreate ? 'Tutup Form' : 'Buat PO Baru' }}
       </button>
+      <input
+        v-model="search"
+        type="text"
+        placeholder="Cari nomor PO atau supplier..."
+        class="flex-1 min-w-[200px] px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all"
+        @keyup.enter="load"
+      />
       <select
         v-model="statusFilter"
         class="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-secondary focus:outline-none focus:border-primary cursor-pointer"
-        @change="load"
+        @change="applyFilter"
       >
         <option value="all">Semua Status</option>
         <option value="DRAFT">DRAFT</option>
@@ -244,6 +259,14 @@ onMounted(load);
           </tbody>
         </table>
       </div>
+      <Pagination
+        :page="page"
+        :total-pages="totalPages"
+        :total="total"
+        :limit="limit"
+        @change-page="(p) => (p > page ? next() : prev())"
+        @change-limit="changeLimit"
+      />
     </div>
   </div>
 </template>

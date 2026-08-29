@@ -30,7 +30,7 @@ export class MutationController {
 
   @Get()
   @ApiOperation({ summary: 'Daftar mutasi (filter status)' })
-  findAll(@Query() query: { page?: number; limit?: number; status?: MutationStatus }) {
+  findAll(@Query() query: { page?: number; limit?: number; status?: MutationStatus; search?: string }) {
     return this.mutationService.findAll(query);
   }
 

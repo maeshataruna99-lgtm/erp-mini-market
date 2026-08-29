@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { OpnameStatus } from '@prisma/client';
+import { OpnameStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { BlindCountDto, CreateOpnameSessionDto } from './dto/opname.dto';
@@ -16,11 +16,16 @@ export class OpnameService {
     private readonly auditLog: AuditLogService,
   ) {}
 
-  async findAll(query: { page?: number; limit?: number; status?: OpnameStatus }) {
+  async findAll(query: { page?: number; limit?: number; status?: OpnameStatus; search?: string }) {
     const page = query.page && query.page > 0 ? Math.floor(query.page) : 1;
     const limit = query.limit && query.limit > 0 ? Math.min(Math.floor(query.limit), 100) : 20;
 
-    const where = query.status ? { status: query.status } : {};
+    const where: Prisma.StockOpnameSessionWhereInput = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.search
+        ? { OR: [{ scope: { contains: query.search, mode: 'insensitive' } }] }
+        : {}),
+    };
     const [items, total] = await Promise.all([
       this.prisma.stockOpnameSession.findMany({
         where,

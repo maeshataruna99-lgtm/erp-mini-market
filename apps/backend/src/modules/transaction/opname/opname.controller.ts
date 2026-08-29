@@ -26,7 +26,7 @@ export class OpnameController {
 
   @Get()
   @ApiOperation({ summary: 'Daftar sesi opname' })
-  findAll(@Query() query: { page?: number; limit?: number; status?: OpnameStatus }) {
+  findAll(@Query() query: { page?: number; limit?: number; status?: OpnameStatus; search?: string }) {
     return this.opnameService.findAll(query);
   }
 
