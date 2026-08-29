@@ -105,7 +105,7 @@ export class MutationService {
     return updated;
   }
 
-  async reject(id: string, user: AuthUser) {
+  async reject(id: string, _user: AuthUser) {
     const mutation = await this.findOne(id);
     this.assertStatus(mutation.status, [MutationStatus.REQUESTED]);
     return this.prisma.stockMutation.update({

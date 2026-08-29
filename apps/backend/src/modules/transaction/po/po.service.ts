@@ -123,7 +123,7 @@ export class PoService {
     return updated;
   }
 
-  async send(id: string, user: AuthUser) {
+  async send(id: string, _user: AuthUser) {
     const po = await this.findOne(id);
     if (po.status !== POStatus.APPROVED) {
       throw new BadRequestException('Hanya PO dengan status APPROVED yang bisa dikirim');
