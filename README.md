@@ -11,9 +11,24 @@ Aplikasi Manajemen Minimarket (PO, Penerimaan Barang, Stock Opname, Mutasi antar
 | Swagger | `http://localhost:3000/api/docs` |
 | Auth | JWT (access + refresh), RBAC |
 
+## Dua Mode Penyimpanan
+
+Aplikasi bisa berjalan dalam **dua mode**, dipilih lewat env build frontend `VITE_USE_LOCAL_DB`:
+
+| Mode | Env `VITE_USE_LOCAL_DB` | Backend | Penyimpanan |
+|---|---|---|---|
+| **Self-hosted / lokal** | (tidak diset / `false`) | NestJS + Prisma | PostgreSQL (persisten) |
+| **Vercel / browser** | `true` | tanpa backend | localStorage browser |
+
+- **Mode lokal (PostgreSQL):** backend + frontend jalan bersama (lihat "Cara Menjalankan" di bawah). Data tersimpan di PostgreSQL.
+- **Mode Vercel (localStorage):** hanya frontend static di-deploy. Vercel tidak menyediakan database server, jadi seluruh logika bisnis dijalankan di browser oleh engine `src/localdb/` yang membaca/menulis `localStorage`. Data **auto-seed** saat pertama kali dibuka dan tersimpan per-browser (bersifat ephemeral — hilang jika localStorage dibersihkan). Perilaku, RBAC, dan status transaksi setara backend.
+
+Kedua mode memakai akun seed yang sama (lihat "Akun seed").
+
 ## Prerequisite
 
-- **Docker + Docker Compose** (opsi A) **ATAU** **Node.js 20+ + PostgreSQL lokal** (opsi B).
+- **Docker + Docker Compose** (opsi A) **ATAU** **Node.js 20+ + PostgreSQL lokal** (opsi B) — untuk mode **PostgreSQL**.
+- Untuk mode **Vercel** tidak butuh backend/PostgreSQL, cukup build static frontend.
 
 ## Cara Menjalankan
 
@@ -78,6 +93,33 @@ npm run dev
 | kasir@minierp.id | admin123 | STAFF_KASIR |
 | kasircabang@minierp.id | admin123 | STAFF_KASIR |
 
+## Deploy ke Vercel
+
+Vercel hanya menjalankan frontend static — **backend tidak di-deploy**. Pastikan mode `VITE_USE_LOCAL_DB=true` agar data disimpan di localStorage browser.
+
+**Setting di dashboard Vercel (project frontend):**
+
+| Pengaturan | Nilai |
+|---|---|
+| Root Directory | `apps/frontend` |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Environment Variable | `VITE_USE_LOCAL_DB=true` |
+
+> Konek langsung dari root repo: Vercel auto-detect framework (Vite), namun **wajib set `Root Directory` ke `apps/frontend`** dan tambahkan env `VITE_USE_LOCAL_DB=true`.
+
+**SPA routing (history mode).** Vue Router memakai `createWebHistory`, jadi buat file `vercel.json` di `apps/frontend` agar semua route dialihkan ke `index.html`:
+
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+Setelah deploy, buka URL yang dihasilkan dan login dengan akun seed (mis. `admin@minierp.id` / `admin123`). Data auto-seed otomatis tersimpan di browser masing-masing user.
+
+> Catatan: karena tidak ada backend, mode Vercel bersifat **demo/per-user** — data tidak dibagi antar perangkat dan bisa hilang saat localStorage dibersihkan.
+
 ## Struktur
 
 ```
@@ -93,6 +135,8 @@ apps/backend/src/
 
 apps/frontend/src/
 ├── api/             # axios + interceptor (JWT, 401, unwrap response helper)
+├── localdb/         # engine browser localStorage (mode Vercel) — helpers, db, seed, auth,
+│                    #   master, po, receiving, opname, mutation, dashboard, router
 ├── components/      # layout (sidebar/bottom-nav) + ui (StatCard, StatusBadge)
 ├── stores/          # Pinia (auth)
 ├── router/
@@ -102,6 +146,7 @@ apps/frontend/src/
 ## Test & Lint
 
 ```bash
-npm test -w @erp/backend    # unit test helper + service
+npm test -w @erp/backend       # unit test helper + service (NestJS)
+npm test -w @erp/frontend      # unit test engine localdb (Vitest)
 npm run lint -w @erp/backend
 ```
