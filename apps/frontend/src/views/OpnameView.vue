@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
+import Pagination from '@/components/ui/Pagination.vue';
 import { opnameApi, unitApi } from '@/api';
 import { formatDate } from '@/utils/format';
 import { useToast } from '@/composables/useToast';
+import { usePagedList } from '@/composables/usePagedList';
 import type { OpnameSession, Unit } from '@/types';
 
 const toast = useToast();
-const list = ref<OpnameSession[]>([]);
 const units = ref<Unit[]>([]);
 const showCreate = ref(false);
 const detail = ref<OpnameSession | null>(null);
@@ -17,10 +18,21 @@ const processing = ref(false);
 
 const form = reactive({ unitId: '', scope: 'ALL' });
 
-async function load() {
-  const res = await opnameApi.list({ limit: 50 });
-  list.value = res.data;
-}
+const {
+  items: list,
+  loading,
+  page,
+  total,
+  totalPages,
+  limit,
+  search,
+  load,
+  next,
+  prev,
+  changeLimit,
+} = usePagedList<OpnameSession>({
+  fetcher: (p) => opnameApi.list(p),
+});
 
 async function createSession() {
   if (!form.unitId) return toast.error('Pilih unit terlebih dahulu');
@@ -106,10 +118,19 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-4">
-    <button class="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2" @click="showCreate = !showCreate">
-      <i class="ph ph-plus"></i>
-      {{ showCreate ? 'Tutup' : 'Buat Sesi Opname' }}
-    </button>
+    <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+      <button class="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shrink-0" @click="showCreate = !showCreate">
+        <i class="ph ph-plus"></i>
+        {{ showCreate ? 'Tutup' : 'Buat Sesi Opname' }}
+      </button>
+      <input
+        v-model="search"
+        type="text"
+        placeholder="Cari scope sesi opname..."
+        class="flex-1 min-w-[200px] px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all"
+        @keyup.enter="load"
+      />
+    </div>
 
     <div v-if="showCreate" class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -143,6 +164,7 @@ onMounted(async () => {
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-50">
+            <tr v-if="loading"><td colspan="5" class="px-6 py-8 text-center text-secondary">Memuat...</td></tr>
             <tr v-for="s in list" :key="s.id" class="hover:bg-slate-50/50 transition-colors">
               <td class="px-6 py-4 font-medium text-slate-900">{{ units.find((u) => u.id === s.unitId)?.name ?? s.unitId }}</td>
               <td class="px-6 py-4 text-secondary">{{ formatDate(s.scheduledAt) }}</td>
@@ -152,10 +174,18 @@ onMounted(async () => {
                 <button class="text-xs px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20" @click="openDetail(s)">Buka</button>
               </td>
             </tr>
-            <tr v-if="list.length === 0"><td colspan="5" class="px-6 py-8 text-center text-secondary">Belum ada sesi opname.</td></tr>
+            <tr v-if="!loading && list.length === 0"><td colspan="5" class="px-6 py-8 text-center text-secondary">Belum ada sesi opname.</td></tr>
           </tbody>
         </table>
       </div>
+      <Pagination
+        :page="page"
+        :total-pages="totalPages"
+        :total="total"
+        :limit="limit"
+        @change-page="(p) => (p > page ? next() : prev())"
+        @change-limit="changeLimit"
+      />
     </div>
 
     <!-- Detail Modal -->

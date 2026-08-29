@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { POStatus, ReceivingStatus } from '@prisma/client';
+import { POStatus, Prisma, ReceivingStatus } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { NotificationHelper } from '../../../common/helpers/notification.helper';
 import { ConfirmReceivingDto, CreateReceivingDto } from './dto/receiving.dto';
@@ -13,12 +13,21 @@ import { AuthUser } from '../../../common/decorators/current-user.decorator';
 export class ReceivingService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: { page?: number; limit?: number }) {
+  async findAll(query: { page?: number; limit?: number; search?: string }) {
     const page = query.page && query.page > 0 ? Math.floor(query.page) : 1;
     const limit = query.limit && query.limit > 0 ? Math.min(Math.floor(query.limit), 100) : 20;
+    const where: Prisma.GoodsReceivingWhereInput = query.search
+      ? {
+          OR: [
+            { po: { poNumber: { contains: query.search, mode: 'insensitive' } } },
+            { po: { supplier: { name: { contains: query.search, mode: 'insensitive' } } } },
+          ],
+        }
+      : {};
 
     const [items, total] = await Promise.all([
       this.prisma.goodsReceiving.findMany({
+        where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -28,7 +37,7 @@ export class ReceivingService {
           _count: { select: { items: true } },
         },
       }),
-      this.prisma.goodsReceiving.count(),
+      this.prisma.goodsReceiving.count({ where }),
     ]);
 
     return { items, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };

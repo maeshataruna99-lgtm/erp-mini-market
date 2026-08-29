@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
+import Pagination from '@/components/ui/Pagination.vue';
 import { mutationApi, productApi, unitApi } from '@/api';
 import { useToast } from '@/composables/useToast';
+import { usePagedList } from '@/composables/usePagedList';
 import type { Product, StockMutation, Unit } from '@/types';
 
 const toast = useToast();
-const list = ref<StockMutation[]>([]);
 const units = ref<Unit[]>([]);
 const products = ref<Product[]>([]);
 const showCreate = ref(false);
@@ -17,10 +18,21 @@ const form = reactive({
   items: [] as { productId: string; qty: number }[],
 });
 
-async function load() {
-  const res = await mutationApi.list({ limit: 50 });
-  list.value = res.data;
-}
+const {
+  items: list,
+  loading,
+  page,
+  total,
+  totalPages,
+  limit,
+  search,
+  load,
+  next,
+  prev,
+  changeLimit,
+} = usePagedList<StockMutation>({
+  fetcher: (p) => mutationApi.list(p),
+});
 
 async function openCreate() {
   showCreate.value = !showCreate.value;
@@ -80,10 +92,19 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-4">
-    <button class="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2" @click="openCreate">
-      <i class="ph ph-plus"></i>
-      {{ showCreate ? 'Tutup' : 'Buat Mutasi' }}
-    </button>
+    <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+      <button class="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 shrink-0" @click="openCreate">
+        <i class="ph ph-plus"></i>
+        {{ showCreate ? 'Tutup' : 'Buat Mutasi' }}
+      </button>
+      <input
+        v-model="search"
+        type="text"
+        placeholder="Cari nomor mutasi atau unit..."
+        class="flex-1 min-w-[200px] px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all"
+        @keyup.enter="load"
+      />
+    </div>
 
     <div v-if="showCreate" class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -146,6 +167,7 @@ onMounted(async () => {
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-50">
+            <tr v-if="loading"><td colspan="5" class="px-6 py-8 text-center text-secondary">Memuat...</td></tr>
             <tr v-for="m in list" :key="m.id" class="hover:bg-slate-50/50 transition-colors">
               <td class="px-6 py-4 font-mono text-xs font-medium text-slate-900">{{ m.mutationNumber }}</td>
               <td class="px-6 py-4 text-slate-900">
@@ -162,10 +184,18 @@ onMounted(async () => {
                 </div>
               </td>
             </tr>
-            <tr v-if="list.length === 0"><td colspan="5" class="px-6 py-8 text-center text-secondary">Belum ada mutasi.</td></tr>
+            <tr v-if="!loading && list.length === 0"><td colspan="5" class="px-6 py-8 text-center text-secondary">Belum ada mutasi.</td></tr>
           </tbody>
         </table>
       </div>
+      <Pagination
+        :page="page"
+        :total-pages="totalPages"
+        :total="total"
+        :limit="limit"
+        @change-page="(p) => (p > page ? next() : prev())"
+        @change-limit="changeLimit"
+      />
     </div>
   </div>
 </template>

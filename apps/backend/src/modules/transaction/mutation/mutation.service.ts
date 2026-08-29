@@ -18,9 +18,20 @@ export class MutationService {
     private readonly auditLog: AuditLogService,
   ) {}
 
-  async findAll(query: { page?: number; limit?: number; status?: MutationStatus }) {
+  async findAll(query: { page?: number; limit?: number; status?: MutationStatus; search?: string }) {
     const { page, limit, skip } = PaginationHelper.normalize(query.page, query.limit);
-    const where: Prisma.StockMutationWhereInput = query.status ? { status: query.status } : {};
+    const where: Prisma.StockMutationWhereInput = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.search
+        ? {
+            OR: [
+              { mutationNumber: { contains: query.search, mode: 'insensitive' } },
+              { fromUnit: { name: { contains: query.search, mode: 'insensitive' } } },
+              { toUnit: { name: { contains: query.search, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
 
     const [items, total] = await Promise.all([
       this.prisma.stockMutation.findMany({

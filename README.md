@@ -11,23 +11,56 @@ Aplikasi Manajemen Minimarket (PO, Penerimaan Barang, Stock Opname, Mutasi antar
 | Swagger | `http://localhost:3000/api/docs` |
 | Auth | JWT (access + refresh), RBAC |
 
-## Setup
+## Prerequisite
 
-1. **Prerequisite**: Node.js 20+, PostgreSQL berjalan lokal.
-2. **Atur koneksi DB** di `apps/backend/.env` (copy dari `.env.example`).
-3. **Install dependensi** (dari root):
-   ```bash
-   npm install
-   ```
-4. **Migrasi + seed**:
-   ```bash
-   npm run prisma:migrate -w @erp/backend
-   npm run prisma:seed -w @erp/backend
-   ```
+- **Docker + Docker Compose** (opsi A) **ATAU** **Node.js 20+ + PostgreSQL lokal** (opsi B).
 
-## Menjalankan (backend + frontend bersama)
+## Cara Menjalankan
+
+Ada dua cara: **menggunakan Docker** atau **langsung tanpa Docker**. Pilih salah satu.
+
+### Opsi A — Menggunakan Docker (recommended)
+
+Tanpa perlu install Node/PostgreSQL. Postgres, backend, dan frontend jalan di container.
 
 ```bash
+# 1. Jalankan seluruh stack (build image dulu)
+docker compose up --build -d
+
+# 2. Seed data simulasi
+docker compose exec backend npm run prisma:seed
+```
+
+- Frontend: http://localhost:8080
+- Backend API: http://localhost:3000/api/v1
+- Swagger: http://localhost:3000/api/docs
+- PostgreSQL: localhost:5432
+
+Migrasi database otomatis berjalan saat backend start. Variabel env (mis. `POSTGRES_PASSWORD`, `JWT_ACCESS_SECRET`) bisa diatur lewat file `.env` di root project.
+
+Menghentikan stack:
+
+```bash
+docker compose down          # hentikan container
+docker compose down -v       # hentikan + hapus volume DB (data di-reset)
+```
+
+### Opsi B — Tanpa Docker (langsung)
+
+Butuh **Node.js 20+** dan **PostgreSQL berjalan lokal**.
+
+```bash
+# 1. Install dependensi (dari root)
+npm install
+
+# 2. Atur koneksi DB di apps/backend/.env (copy dari .env.example)
+#    contoh: DATABASE_URL="postgresql://postgres:password@localhost:5432/erp_mini_market?schema=public"
+
+# 3. Migrasi + seed
+npm run prisma:migrate -w @erp/backend
+npm run prisma:seed -w @erp/backend
+
+# 4. Jalankan backend + frontend bersama
 npm run dev
 ```
 
@@ -40,8 +73,10 @@ npm run dev
 | Email | Password | Role |
 |---|---|---|
 | admin@minierp.id | admin123 | ADMIN |
+| manager@minierp.id | admin123 | MANAGER |
 | gudang@minierp.id | admin123 | STAFF_GUDANG |
 | kasir@minierp.id | admin123 | STAFF_KASIR |
+| kasircabang@minierp.id | admin123 | STAFF_KASIR |
 
 ## Struktur
 

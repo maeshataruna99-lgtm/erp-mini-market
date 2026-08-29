@@ -25,7 +25,7 @@ export class ReceivingController {
 
   @Get()
   @ApiOperation({ summary: 'Daftar penerimaan' })
-  findAll(@Query() query: { page?: number; limit?: number }) {
+  findAll(@Query() query: { page?: number; limit?: number; search?: string }) {
     return this.receivingService.findAll(query);
   }
 
