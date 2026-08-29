@@ -1,6 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/stores/auth';
-import type { ApiResponse, AuthResponse } from '@/types';
+import type { ApiMeta, ApiResponse, AuthResponse } from '@/types';
 
 export const http = axios.create({
   baseURL: '/api/v1',
@@ -65,6 +65,11 @@ http.interceptors.response.use(
 export async function get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
   const res = await http.get<ApiResponse<T>>(url, config);
   return res.data.data;
+}
+
+export async function paginated<T>(url: string, config?: AxiosRequestConfig): Promise<{ data: T[]; meta: ApiMeta }> {
+  const res = await http.get<ApiResponse<T[]>>(url, config);
+  return { data: res.data.data, meta: res.data.meta ?? { page: 1, limit: 0, total: 0, totalPages: 0 } };
 }
 
 export async function post<T>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<T> {
