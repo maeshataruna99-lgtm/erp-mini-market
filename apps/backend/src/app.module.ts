@@ -10,6 +10,11 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UnitModule } from './modules/master/unit/unit.module';
 import { SupplierModule } from './modules/master/supplier/supplier.module';
 import { ProductModule } from './modules/master/product/product.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { PoModule } from './modules/transaction/po/po.module';
+import { ReceivingModule } from './modules/transaction/receiving/receiving.module';
+import { OpnameModule } from './modules/transaction/opname/opname.module';
+import { MutationModule } from './modules/transaction/mutation/mutation.module';
 
 @Module({
   imports: [
@@ -30,6 +35,11 @@ import { ProductModule } from './modules/master/product/product.module';
     UnitModule,
     SupplierModule,
     ProductModule,
+    AuditModule,
+    PoModule,
+    ReceivingModule,
+    OpnameModule,
+    MutationModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

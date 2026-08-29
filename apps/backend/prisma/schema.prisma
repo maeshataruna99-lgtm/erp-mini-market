@@ -250,6 +250,7 @@ model StockOpnameItem {
   reason      String?
   countedById String
 
+  @@unique([sessionId, productId])
   @@index([sessionId])
 }
 
