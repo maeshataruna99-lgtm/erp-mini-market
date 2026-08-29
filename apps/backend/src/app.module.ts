@@ -7,6 +7,9 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { UnitModule } from './modules/master/unit/unit.module';
+import { SupplierModule } from './modules/master/supplier/supplier.module';
+import { ProductModule } from './modules/master/product/product.module';
 
 @Module({
   imports: [
@@ -24,6 +27,9 @@ import { AuthModule } from './modules/auth/auth.module';
     PrismaModule,
     HealthModule,
     AuthModule,
+    UnitModule,
+    SupplierModule,
+    ProductModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
