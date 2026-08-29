@@ -42,3 +42,20 @@ body {
   opacity: 0;
   transform: translateY(8px);
 }
+
+.drawer-enter-active,
+.drawer-leave-active {
+  transition: opacity 0.2s ease;
+}
+.drawer-enter-active .relative,
+.drawer-leave-active .relative {
+  transition: transform 0.25s ease;
+}
+.drawer-enter-from,
+.drawer-leave-to {
+  opacity: 0;
+}
+.drawer-enter-from .relative,
+.drawer-leave-to .relative {
+  transform: translateX(-100%);
+}

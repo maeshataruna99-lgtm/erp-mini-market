@@ -1,6 +1,9 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import type { ApiMeta, ApiResponse, AuthResponse } from '@/types';
+import * as localdb from '@/localdb';
+
+const localMode = import.meta.env.VITE_USE_LOCAL_DB === 'true';
 
 export const http = axios.create({
   baseURL: '/api/v1',
@@ -63,26 +66,31 @@ http.interceptors.response.use(
 );
 
 export async function get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  if (localMode) return localdb.get<T>(url, config as localdb.ReqConfig);
   const res = await http.get<ApiResponse<T>>(url, config);
   return res.data.data;
 }
 
 export async function paginated<T>(url: string, config?: AxiosRequestConfig): Promise<{ data: T[]; meta: ApiMeta }> {
+  if (localMode) return localdb.paginated<T>(url, config as localdb.ReqConfig);
   const res = await http.get<ApiResponse<T[]>>(url, config);
   return { data: res.data.data, meta: res.data.meta ?? { page: 1, limit: 0, total: 0, totalPages: 0 } };
 }
 
 export async function post<T>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<T> {
+  if (localMode) return localdb.post<T>(url, body, config as localdb.ReqConfig);
   const res = await http.post<ApiResponse<T>>(url, body, config);
   return res.data.data;
 }
 
 export async function patch<T>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<T> {
+  if (localMode) return localdb.patch<T>(url, body, config as localdb.ReqConfig);
   const res = await http.patch<ApiResponse<T>>(url, body, config);
   return res.data.data;
 }
 
 export async function remove<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  if (localMode) return localdb.remove<T>(url, config as localdb.ReqConfig);
   const res = await http.delete<ApiResponse<T>>(url, config);
   return res.data.data;
 }

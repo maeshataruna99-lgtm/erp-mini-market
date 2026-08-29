@@ -31,3 +31,6 @@ coverage/
 
 # Prisma
 apps/backend/prisma/migrations/dev.db
+
+# Git worktrees
+.worktrees/

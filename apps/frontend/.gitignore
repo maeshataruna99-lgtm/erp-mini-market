@@ -1,0 +1,6 @@
+.vercel
+
+# Local env (rahasia)
+.env
+.env.*
+!.env.example
