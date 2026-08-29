@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
@@ -8,6 +8,15 @@ const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
 const toast = useToast();
+
+const mobileOpen = ref(false);
+
+watch(
+  () => route.fullPath,
+  () => {
+    mobileOpen.value = false;
+  },
+);
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: 'ph-squares-four', short: 'Dashboard' },
@@ -89,6 +98,13 @@ function logout() {
       <!-- Header -->
       <header class="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-8 flex-shrink-0 z-10">
         <div class="flex items-center gap-4">
+          <button
+            class="md:hidden p-2 -ml-1 text-secondary hover:text-slate-900 transition-colors"
+            aria-label="Buka menu"
+            @click="mobileOpen = true"
+          >
+            <i class="ph ph-list text-2xl"></i>
+          </button>
           <h1 id="page-title" class="text-lg font-bold text-slate-900">{{ title }}</h1>
         </div>
 
@@ -126,26 +142,55 @@ function logout() {
         </div>
       </div>
 
-      <!-- Mobile Bottom Nav -->
-      <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 pb-safe z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <div class="flex justify-around items-center h-16">
-          <RouterLink
-            v-for="item in navItems.filter((_, i) => [0, 1, 2, 6].includes(i))"
-            :key="item.path"
-            :to="item.path"
-            class="flex flex-col items-center justify-center w-full h-full gap-1 relative"
-            :class="isActive(item.path) ? 'text-primary' : 'text-secondary'"
-          >
-            <i class="ph text-2xl" :class="item.icon"></i>
-            <span class="text-[10px] font-medium">{{ item.short }}</span>
-            <span v-if="isActive(item.path)" class="absolute top-2 w-1 h-1 bg-primary rounded-full"></span>
-          </RouterLink>
-        </div>
-      </nav>
+      <!-- Mobile Sidebar (off-canvas) -->
+      <Teleport to="body">
+        <Transition name="drawer">
+          <div v-if="mobileOpen" class="md:hidden fixed inset-0 z-50 flex">
+            <div class="absolute inset-0 bg-slate-900/40" @click="mobileOpen = false"></div>
+            <aside class="relative w-72 max-w-[80vw] bg-white h-full flex flex-col shadow-2xl">
+              <div class="p-5 flex items-center gap-3 border-b border-slate-100">
+                <div class="w-9 h-9 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-lg">M</div>
+                <span class="font-bold text-xl tracking-tight text-slate-900">MiniERP</span>
+                <button
+                  class="ml-auto p-2 text-secondary hover:text-slate-900 transition-colors"
+                  aria-label="Tutup menu"
+                  @click="mobileOpen = false"
+                >
+                  <i class="ph ph-x text-2xl"></i>
+                </button>
+              </div>
+
+              <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+                <RouterLink
+                  v-for="item in navItems"
+                  :key="item.path"
+                  :to="item.path"
+                  class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200"
+                  :class="isActive(item.path) ? 'bg-primary/10 text-primary' : 'text-secondary hover:bg-slate-50 hover:text-slate-900'"
+                  @click="mobileOpen = false"
+                >
+                  <i class="ph text-xl" :class="item.icon"></i>
+                  {{ item.label }}
+                </RouterLink>
+              </nav>
+
+              <div class="p-4 border-t border-slate-100">
+                <button
+                  class="w-full flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-danger hover:bg-danger/5 transition-colors"
+                  @click="logout"
+                >
+                  <i class="ph ph-sign-out text-lg"></i>
+                  Keluar
+                </button>
+              </div>
+            </aside>
+          </div>
+        </Transition>
+      </Teleport>
 
       <!-- Mobile FAB -->
       <button
-        class="md:hidden fixed bottom-20 right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg shadow-primary/30 flex items-center justify-center z-20 active:scale-90 transition-transform"
+        class="md:hidden fixed bottom-6 right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg shadow-primary/30 flex items-center justify-center z-40 active:scale-90 transition-transform"
         @click="router.push('/po')"
       >
         <i class="ph ph-plus text-2xl"></i>
