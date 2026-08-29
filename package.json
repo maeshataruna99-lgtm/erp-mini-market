@@ -1,0 +1,18 @@
+{
+  "name": "erp-mini-market",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MiniMarket ERP - backend NestJS + Prisma, frontend Vue 3 + Vite (monorepo)",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w @erp/backend\" \"npm run dev -w @erp/frontend\"",
+    "build": "npm run build -w @erp/backend && npm run build -w @erp/frontend",
+    "test": "npm run test -w @erp/backend",
+    "lint": "npm run lint -w @erp/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

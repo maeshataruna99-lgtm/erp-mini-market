@@ -1,0 +1,316 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =========================
+// User & Auth
+// =========================
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF_GUDANG
+  STAFF_KASIR
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(STAFF_KASIR)
+  unitId       String?
+  unit         Unit?    @relation(fields: [unitId], references: [id])
+  createdAt    DateTime @default(now())
+
+  purchaseOrders      PurchaseOrder[] @relation("PO_CreatedBy")
+  approvals           PurchaseOrder[] @relation("PO_ApprovedBy")
+  goodsReceivings     GoodsReceiving[]
+  stockOpnameSessions StockOpnameSession[]
+  auditLogs           AuditLog[]
+  mutationsRequested  StockMutation[] @relation("Mutation_RequestedBy")
+  mutationsApproved   StockMutation[] @relation("Mutation_ApprovedBy")
+  refreshTokens       RefreshToken[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// =========================
+// Unit / Gudang (Multi-Unit)
+// =========================
+model Unit {
+  id        String   @id @default(cuid())
+  name      String
+  isCentral Boolean  @default(false)
+  address   String?
+  createdAt DateTime @default(now())
+
+  users         User[]
+  stockLevels   StockLevel[]
+  mutationsFrom StockMutation[] @relation("Mutation_From")
+  mutationsTo   StockMutation[] @relation("Mutation_To")
+}
+
+// =========================
+// Master Data
+// =========================
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  createdAt DateTime @default(now())
+
+  purchaseOrders PurchaseOrder[]
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  sku          String   @unique
+  barcode      String?  @unique
+  name         String
+  category     String?
+  unit         String
+  minStock     Int      @default(0)
+  costPrice    Decimal  @db.Decimal(12, 2)
+  sellPrice    Decimal  @db.Decimal(12, 2)
+  isPerishable Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  stockLevels    StockLevel[]
+  poItems        PurchaseOrderItem[]
+  receivingItems GoodsReceivingItem[]
+  opnameItems    StockOpnameItem[]
+  mutationItems  StockMutationItem[]
+  batches        ProductBatch[]
+}
+
+// Untuk FEFO / expiry tracking
+model ProductBatch {
+  id         String    @id @default(cuid())
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  unitId     String
+  batchNo    String?
+  qty        Int
+  expiryDate DateTime?
+  receivedAt DateTime  @default(now())
+
+  @@index([productId, unitId])
+}
+
+// Stok per produk per unit (sumber kebenaran level stok)
+model StockLevel {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  unitId    String
+  unit      Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  qty       Int     @default(0)
+
+  @@unique([productId, unitId])
+  @@index([unitId])
+}
+
+// =========================
+// A. Purchase Order
+// =========================
+enum POStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  SENT
+  PARTIAL
+  COMPLETED
+  CANCELLED
+}
+
+model PurchaseOrder {
+  id           String   @id @default(cuid())
+  poNumber     String   @unique
+  supplierId   String
+  supplier     Supplier @relation(fields: [supplierId], references: [id])
+  status       POStatus @default(DRAFT)
+  createdById  String
+  createdBy    User     @relation("PO_CreatedBy", fields: [createdById], references: [id])
+  approvedById String?
+  approvedBy   User?    @relation("PO_ApprovedBy", fields: [approvedById], references: [id])
+  sentAt       DateTime?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items           PurchaseOrderItem[]
+  goodsReceivings GoodsReceiving[]
+
+  @@index([supplierId])
+  @@index([status])
+}
+
+model PurchaseOrderItem {
+  id        String        @id @default(cuid())
+  poId      String
+  po        PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product       @relation(fields: [productId], references: [id])
+  qtyOrder  Int
+  price     Decimal       @db.Decimal(12, 2)
+
+  @@index([poId])
+}
+
+// =========================
+// B. Goods Receiving
+// =========================
+enum ReceivingStatus {
+  DRAFT
+  PARTIAL
+  COMPLETED
+}
+
+model GoodsReceiving {
+  id              String          @id @default(cuid())
+  poId            String
+  po              PurchaseOrder   @relation(fields: [poId], references: [id])
+  receivedById    String
+  receivedBy      User            @relation(fields: [receivedById], references: [id])
+  unitId          String
+  status          ReceivingStatus @default(DRAFT)
+  hasDiscrepancy  Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+
+  items GoodsReceivingItem[]
+
+  @@index([poId])
+}
+
+model GoodsReceivingItem {
+  id             String         @id @default(cuid())
+  receivingId    String
+  receiving      GoodsReceiving @relation(fields: [receivingId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product        @relation(fields: [productId], references: [id])
+  qtyOrdered     Int
+  qtyReceived    Int
+  discrepancyPct Decimal        @db.Decimal(5, 2) @default(0)
+
+  @@index([receivingId])
+}
+
+// =========================
+// C. Stock Opname
+// =========================
+enum OpnameStatus {
+  SCHEDULED
+  IN_PROGRESS
+  RECONCILED
+  CLOSED
+}
+
+model StockOpnameSession {
+  id          String       @id @default(cuid())
+  unitId      String
+  scope       String?
+  status      OpnameStatus @default(SCHEDULED)
+  scheduledAt DateTime
+  createdById String
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+
+  items StockOpnameItem[]
+
+  @@index([unitId])
+}
+
+model StockOpnameItem {
+  id          String             @id @default(cuid())
+  sessionId   String
+  session     StockOpnameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product            @relation(fields: [productId], references: [id])
+  qtySystem   Int
+  qtyPhysical Int
+  variance    Int                @default(0)
+  reason      String?
+  countedById String
+
+  @@index([sessionId])
+}
+
+// =========================
+// D. Distribusi / Mutasi Antar Unit
+// =========================
+enum MutationStatus {
+  REQUESTED
+  APPROVED
+  IN_TRANSIT
+  RECEIVED
+  REJECTED
+}
+
+model StockMutation {
+  id            String         @id @default(cuid())
+  mutationNumber String        @unique
+  fromUnitId    String
+  fromUnit      Unit           @relation("Mutation_From", fields: [fromUnitId], references: [id])
+  toUnitId      String
+  toUnit        Unit           @relation("Mutation_To", fields: [toUnitId], references: [id])
+  status        MutationStatus @default(REQUESTED)
+  requestedById String
+  requestedBy   User           @relation("Mutation_RequestedBy", fields: [requestedById], references: [id])
+  approvedById  String?
+  approvedBy    User?          @relation("Mutation_ApprovedBy", fields: [approvedById], references: [id])
+  createdAt     DateTime       @default(now())
+
+  items StockMutationItem[]
+
+  @@index([fromUnitId])
+  @@index([toUnitId])
+  @@index([status])
+}
+
+model StockMutationItem {
+  id         String        @id @default(cuid())
+  mutationId String
+  mutation   StockMutation @relation(fields: [mutationId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product       @relation(fields: [productId], references: [id])
+  qty        Int
+
+  @@index([mutationId])
+}
+
+// =========================
+// Audit Log (wajib untuk Stock Opname & Adjustment)
+// =========================
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([action])
+}
