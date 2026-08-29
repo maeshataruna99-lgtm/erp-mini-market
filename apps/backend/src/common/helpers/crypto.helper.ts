@@ -1,5 +1,5 @@
 import * as bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 
 export class CryptoHelper {
   static async hashPassword(plain: string, rounds = 10): Promise<string> {
@@ -12,6 +12,10 @@ export class CryptoHelper {
 
   static randomToken(bytes = 32): string {
     return randomBytes(bytes).toString('hex');
+  }
+
+  static sha256(value: string): string {
+    return createHash('sha256').update(value).digest('hex');
   }
 
   static maskEmail(email: string): string {
