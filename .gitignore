@@ -5,6 +5,9 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
+*.d.ts.map
+apps/frontend/vite.config.js
+apps/frontend/vite.config.d.ts
 
 # Env
 .env
